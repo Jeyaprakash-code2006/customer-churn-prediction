@@ -1,124 +1,186 @@
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
+# -----------------------------------
+# Load Dataset
+# -----------------------------------
 
-# Load dataset
 df = pd.read_csv("data/customer_churn.csv")
 
 print("Dataset loaded successfully!")
-print("Shape:", df.shape)
+print("Dataset Shape:", df.shape)
 
+# Create folder to save charts
+os.makedirs("data", exist_ok=True)
 
-# -------------------------------
-# 1. Churn Distribution
-# -------------------------------
+# Set chart design
+sns.set_theme(style="darkgrid", palette="viridis")
+
+# Check missing values
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+# Check duplicate records
+print("\nDuplicate Records:", df.duplicated().sum())
+
+# -----------------------------------
+# 1. Churn Percentage
+# -----------------------------------
+
+churn_counts = df["churn"].value_counts().sort_index()
 
 plt.figure(figsize=(7, 5))
-
-sns.countplot(
-    data=df,
-    x="churn"
+plt.pie(
+    churn_counts,
+    labels=["Active Customers", "Churned Customers"],
+    autopct="%1.1f%%",
+    startangle=90,
+    explode=(0, 0.1),
+    shadow=True
 )
-
-plt.title("Customer Churn Distribution")
-plt.xlabel("Churn (0 = No, 1 = Yes)")
-plt.ylabel("Number of Customers")
-
+plt.title("Customer Churn Percentage")
 plt.tight_layout()
-plt.savefig("data/churn_distribution.png")
+plt.savefig("data/churn_percentage.png", dpi=300)
 plt.show()
 
-
-# -------------------------------
+# -----------------------------------
 # 2. Churn by Contract Type
-# -------------------------------
+# -----------------------------------
 
-plt.figure(figsize=(8, 5))
+contract_data = pd.crosstab(
+    df["contract_type"],
+    df["churn"],
+    normalize="index"
+) * 100
 
-sns.countplot(
-    data=df,
-    x="contract_type",
-    hue="churn"
+contract_data.plot(
+    kind="bar",
+    figsize=(9, 5),
+    colormap="viridis"
 )
 
-plt.title("Churn by Contract Type")
+plt.title("Churn Rate by Contract Type")
 plt.xlabel("Contract Type")
-plt.ylabel("Number of Customers")
-
+plt.ylabel("Percentage of Customers")
+plt.xticks(rotation=20)
+plt.legend(["Active", "Churned"])
 plt.tight_layout()
-plt.savefig("data/churn_by_contract.png")
+plt.savefig("data/contract_churn_rate.png", dpi=300)
 plt.show()
 
-
-# -------------------------------
-# 3. Churn by Internet Service
-# -------------------------------
+# -----------------------------------
+# 3. Monthly Charges Distribution
+# -----------------------------------
 
 plt.figure(figsize=(8, 5))
-
-sns.countplot(
+sns.histplot(
     data=df,
-    x="internet_service",
-    hue="churn"
+    x="monthly_charges",
+    hue="churn",
+    kde=True,
+    bins=25,
+    multiple="layer"
 )
 
-plt.title("Churn by Internet Service")
-plt.xlabel("Internet Service")
+plt.title("Monthly Charges Distribution by Churn")
+plt.xlabel("Monthly Charges")
 plt.ylabel("Number of Customers")
-
 plt.tight_layout()
-plt.savefig("data/churn_by_internet.png")
+plt.savefig("data/monthly_charges_distribution.png", dpi=300)
 plt.show()
 
-
-# -------------------------------
-# 4. Monthly Charges vs Churn
-# -------------------------------
+# -----------------------------------
+# 4. Customer Satisfaction Analysis
+# -----------------------------------
 
 plt.figure(figsize=(8, 5))
-
-sns.boxplot(
+sns.violinplot(
     data=df,
     x="churn",
-    y="monthly_charges"
+    y="satisfaction_score",
+    inner="quartile"
 )
 
-plt.title("Monthly Charges vs Churn")
-plt.xlabel("Churn (0 = No, 1 = Yes)")
-plt.ylabel("Monthly Charges")
-
-plt.tight_layout()
-plt.savefig("data/monthly_charges_vs_churn.png")
-plt.show()
-
-
-# -------------------------------
-# 5. Satisfaction Score vs Churn
-# -------------------------------
-
-plt.figure(figsize=(8, 5))
-
-sns.boxplot(
-    data=df,
-    x="churn",
-    y="satisfaction_score"
-)
-
-plt.title("Satisfaction Score vs Churn")
-plt.xlabel("Churn (0 = No, 1 = Yes)")
+plt.title("Customer Satisfaction by Churn Status")
+plt.xlabel("Churn (0 = Active, 1 = Churned)")
 plt.ylabel("Satisfaction Score")
-
 plt.tight_layout()
-plt.savefig("data/satisfaction_vs_churn.png")
+plt.savefig("data/satisfaction_violin.png", dpi=300)
 plt.show()
 
+# -----------------------------------
+# 5. Churn by Internet Service
+# -----------------------------------
+
+internet_data = pd.crosstab(
+    df["internet_service"],
+    df["churn"],
+    normalize="index"
+) * 100
+
+internet_data.plot(
+    kind="barh",
+    figsize=(9, 5),
+    colormap="plasma"
+)
+
+plt.title("Churn Percentage by Internet Service")
+plt.xlabel("Percentage of Customers")
+plt.ylabel("Internet Service")
+plt.legend(["Active", "Churned"])
+plt.tight_layout()
+plt.savefig("data/internet_churn_percentage.png", dpi=300)
+plt.show()
+
+# -----------------------------------
+# 6. Correlation Heatmap
+# -----------------------------------
+
+numeric_df = df.select_dtypes(include="number")
+
+if numeric_df.shape[1] > 1:
+    plt.figure(figsize=(10, 7))
+
+    sns.heatmap(
+        numeric_df.corr(),
+        annot=True,
+        cmap="coolwarm",
+        fmt=".2f",
+        linewidths=0.5
+    )
+
+    plt.title("Customer Data Correlation Heatmap")
+    plt.tight_layout()
+    plt.savefig("data/correlation_heatmap.png", dpi=300)
+    plt.show()
+else:
+    print("Not enough numerical columns for correlation analysis.")
+
+# -----------------------------------
+# 7. Average Customer Charges
+# -----------------------------------
+
+if "churn" in df.columns and "monthly_charges" in df.columns:
+    avg_charges = df.groupby("churn")["monthly_charges"].mean()
+
+    print("\nAverage Monthly Charges by Churn Status:")
+    print(avg_charges)
+
+# -----------------------------------
+# Summary
+# -----------------------------------
 
 print("\nEDA completed successfully!")
 
-print("\nGenerated charts:")
-print("1. churn_distribution.png")
-print("2. churn_by_contract.png")
-print("3. churn_by_internet.png")
-print("4. monthly_charges_vs_churn.png")
-print("5. satisfaction_vs_churn.png")
+print("\nGenerated Charts:")
+print("1. churn_percentage.png")
+print("2. contract_churn_rate.png")
+print("3. monthly_charges_distribution.png")
+print("4. satisfaction_violin.png")
+print("5. internet_churn_percentage.png")
+print("6. correlation_heatmap.png")
+
+print("\nDataset analysis completed.")
